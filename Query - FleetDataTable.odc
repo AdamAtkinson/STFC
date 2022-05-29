@@ -1,0 +1,105 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+xmlns="http://www.w3.org/TR/REC-html40">
+
+<head>
+<meta http-equiv=Content-Type content="text/x-ms-odc; charset=utf-8">
+<meta name=ProgId content=ODC.Database>
+<meta name=SourceType content=OLEDB>
+<title>Query - FleetDataTable</title>
+<xml id=docprops><o:DocumentProperties
+  xmlns:o="urn:schemas-microsoft-com:office:office"
+  xmlns="http://www.w3.org/TR/REC-html40">
+  <o:Description>Connection to the 'FleetDataTable' query in the workbook.</o:Description>
+  <o:Name>Query - FleetDataTable</o:Name>
+ </o:DocumentProperties>
+</xml><xml id=msodc><odc:OfficeDataConnection
+  xmlns:odc="urn:schemas-microsoft-com:office:odc"
+  xmlns="http://www.w3.org/TR/REC-html40">
+  <odc:PowerQueryConnection odc:Type="OLEDB">
+   <odc:ConnectionString>Provider=Microsoft.Mashup.OleDb.1;Data Source=$Workbook$;Location=FleetDataTable;Extended Properties=&quot;&quot;</odc:ConnectionString>
+   <odc:CommandType>SQL</odc:CommandType>
+   <odc:CommandText>SELECT * FROM [FleetDataTable]</odc:CommandText>
+  </odc:PowerQueryConnection>
+  <odc:PowerQueryMashupData>&lt;Mashup xmlns:xsd=&quot;http://www.w3.org/2001/XMLSchema&quot; xmlns:xsi=&quot;http://www.w3.org/2001/XMLSchema-instance&quot; xmlns=&quot;http://schemas.microsoft.com/DataMashup&quot;&gt;&lt;Client&gt;EXCEL&lt;/Client&gt;&lt;Version&gt;2.105.342.0&lt;/Version&gt;&lt;MinVersion&gt;2.21.0.0&lt;/MinVersion&gt;&lt;Culture&gt;en-US&lt;/Culture&gt;&lt;SafeCombine&gt;false&lt;/SafeCombine&gt;&lt;Items&gt;&lt;Query Name=&quot;Folder to Import&quot;&gt;&lt;Description&gt;The full path to the folder containing exported CSV battle reports.&lt;/Description&gt;&lt;Formula&gt;&lt;![CDATA[&quot;D:\Dev\STFC\battle reports\Query Source&quot; meta [IsParameterQuery=true, List={&quot;D:\Dev\STFC\battle reports\Query Source&quot;, &quot;D:\Dev\STFC\battle reports\Ad Hoc&quot;}, DefaultValue=&quot;D:\Dev\STFC\battle reports\Ad Hoc&quot;, Type=&quot;Text&quot;, IsParameterQueryRequired=true]]]&gt;&lt;/Formula&gt;&lt;IsParameterQuery xsi:nil=&quot;true&quot; /&gt;&lt;IsDirectQuery xsi:nil=&quot;true&quot; /&gt;&lt;/Query&gt;&lt;Query Name=&quot;MergedTables&quot;&gt;&lt;Description&gt;The converted blob.  The &quot;Data Model&quot; will be used to format and parse the four tables from each exported report.&lt;/Description&gt;&lt;Formula&gt;&lt;![CDATA[let&#13;&#10;    // Imports all CSV files as a binary blob into a list file.  Source determined by &quot;Folder to Import&quot;.&#13;&#10;    Source = Folder.Files(#&quot;Folder to Import&quot;),&#13;&#10;    // Do not import any hidden files.&#13;&#10;    #&quot;Filter Hidden Files&quot; = Table.SelectRows(Source, each [Attributes]?[Hidden]? &lt;&gt; true),&#13;&#10;    // Convert the list of blobs into a single table.&#13;&#10;    #&quot;Invoke Transform Blob&quot; = Table.AddColumn(#&quot;Filter Hidden Files&quot;, &quot;Transform File&quot;, each #&quot;Transform Blob&quot;([Content])),&#13;&#10;    // Keep columns with file name and file contents, remove all other columns&#13;&#10;    #&quot;Trim Columns&quot; = Table.SelectColumns(#&quot;Invoke Transform Blob&quot;, {&quot;Name&quot;, &quot;Transform File&quot;}),&#13;&#10;    // Expand file contents into new columns&#13;&#10;    #&quot;Expand Columns&quot; = Table.ExpandTableColumn(#&quot;Trim Columns&quot;, &quot;Transform File&quot;, Table.ColumnNames(#&quot;Transform Blob&quot;(Blob))),&#13;&#10;    // New column that increments by 1 with each row.  Used for table identification and grouping.&#13;&#10;    #&quot;Add Index Column&quot; = Table.AddIndexColumn(#&quot;Expand Columns&quot;, &quot;Index&quot;, 0, 1, Int64.Type),&#13;&#10;    // Same as Index Column but with a row break between tables.&#13;&#10;    #&quot;Add Adjusted Index Column&quot; = Table.AddColumn(#&quot;Add Index Column&quot;, &quot;Adjusted&quot;, each if [Column1] &lt;&gt; &quot;&quot; then [Index] else null),&#13;&#10;    // Identify header rows&#13;&#10;    #&quot;Add isHeader Column&quot; = Table.AddColumn(#&quot;Add Adjusted Index Column&quot;, &quot;isHeader&quot;, each if [Column1] = &quot;Player Name&quot; then &quot;Header&quot; else if [Column1] = &quot;Reward Name&quot; then &quot;Header&quot; else if [Column1] = &quot;Fleet Type&quot; then &quot;Header&quot; else if [Column1] = &quot;Round&quot; then &quot;Header&quot; else null),&#13;&#10;    // Places the appropriate TableName on each table header row&#13;&#10;    #&quot;Add TableName Column&quot; = Table.AddColumn(#&quot;Add isHeader Column&quot;, &quot;TableName&quot;, each if [Column1] = &quot;Player Name&quot; then &quot;PlayerData&quot; else if [Column1] = &quot;Reward Name&quot; then &quot;RewardData&quot; else if [Column1] = &quot;Fleet Type&quot; then &quot;FleetData&quot; else if [Column1] = &quot;Round&quot; then &quot;CombatData&quot; else null),&#13;&#10;    // Fill empty rows with appropriate table name (for grouping by table)&#13;&#10;    #&quot;Fill TableName  Down&quot; = Table.FillDown(#&quot;Add TableName Column&quot;,{&quot;TableName&quot;}),&#13;&#10;    // Copies contents of Name and places &quot;SourceFile&quot; in each table header row.&#13;&#10;    #&quot;Added SourceFile Column&quot; = Table.AddColumn(#&quot;Fill TableName  Down&quot;, &quot;SourceFile&quot;, each if [isHeader] &lt;&gt; null then &quot;SourceFile&quot; else [Name]),&#13;&#10;    // Merge SourceFile and TableName with &quot; || &quot; as delimiter&#13;&#10;    #&quot;Generate Shortkey&quot; = Table.AddColumn(#&quot;Added SourceFile Column&quot;, &quot;Short&quot;, each Text.Combine({[SourceFile], [TableName]}, &quot; || &quot;), type text),&#13;&#10;    // A simple key column  for lookups and merges&#13;&#10;    #&quot;Add ShortKey Column&quot; = Table.AddColumn(#&quot;Generate Shortkey&quot;, &quot;ShortKey&quot;, each if [isHeader] = null then [Short] else &quot;ShortKey&quot;),&#13;&#10;    #&quot;Filtered Rows&quot; = Table.SelectRows(#&quot;Add ShortKey Column&quot;, each ([Adjusted] &lt;&gt; null)),&#13;&#10;    #&quot;Removed Columns&quot; = Table.RemoveColumns(#&quot;Filtered Rows&quot;,{&quot;Name&quot;, &quot;Index&quot;, &quot;Adjusted&quot;, &quot;isHeader&quot;, &quot;Short&quot;}),&#13;&#10;    #&quot;Replaced Value&quot; = Table.ReplaceValue(#&quot;Removed Columns&quot;,&quot;&#45;-&quot;,null,Replacer.ReplaceValue,{&quot;Column1&quot;, &quot;Column2&quot;, &quot;Column3&quot;, &quot;Column4&quot;, &quot;Column5&quot;, &quot;Column6&quot;, &quot;Column7&quot;, &quot;Column8&quot;, &quot;Column9&quot;, &quot;Column10&quot;, &quot;Column11&quot;, &quot;Column12&quot;, &quot;Column13&quot;, &quot;Column14&quot;, &quot;Column15&quot;, &quot;Column16&quot;, &quot;Column17&quot;, &quot;Column18&quot;, &quot;Column19&quot;, &quot;Column20&quot;, &quot;Column21&quot;, &quot;Column22&quot;, &quot;Column23&quot;, &quot;Column24&quot;, &quot;Column25&quot;, &quot;Column26&quot;, &quot;Column27&quot;, &quot;Column28&quot;, &quot;Column29&quot;, &quot;Column30&quot;, &quot;TableName&quot;, &quot;SourceFile&quot;, &quot;ShortKey&quot;}),&#13;&#10;    #&quot;Replaced Value1&quot; = Table.ReplaceValue(#&quot;Replaced Value&quot;,&quot;NO&quot;,null,Replacer.ReplaceValue,{&quot;Column1&quot;, &quot;Column2&quot;, &quot;Column3&quot;, &quot;Column4&quot;, &quot;Column5&quot;, &quot;Column6&quot;, &quot;Column7&quot;, &quot;Column8&quot;, &quot;Column9&quot;, &quot;Column10&quot;, &quot;Column11&quot;, &quot;Column12&quot;, &quot;Column13&quot;, &quot;Column14&quot;, &quot;Column15&quot;, &quot;Column16&quot;, &quot;Column17&quot;, &quot;Column18&quot;, &quot;Column19&quot;, &quot;Column20&quot;, &quot;Column21&quot;, &quot;Column22&quot;, &quot;Column23&quot;, &quot;Column24&quot;, &quot;Column25&quot;, &quot;Column26&quot;, &quot;Column27&quot;, &quot;Column28&quot;, &quot;Column29&quot;, &quot;Column30&quot;, &quot;TableName&quot;, &quot;SourceFile&quot;, &quot;ShortKey&quot;}),&#13;&#10;    #&quot;Replaced Value2&quot; = Table.ReplaceValue(#&quot;Replaced Value1&quot;,&quot;YES&quot;,&quot;1&quot;,Replacer.ReplaceValue,{&quot;Column1&quot;, &quot;Column2&quot;, &quot;Column3&quot;, &quot;Column4&quot;, &quot;Column5&quot;, &quot;Column6&quot;, &quot;Column7&quot;, &quot;Column8&quot;, &quot;Column9&quot;, &quot;Column10&quot;, &quot;Column11&quot;, &quot;Column12&quot;, &quot;Column13&quot;, &quot;Column14&quot;, &quot;Column15&quot;, &quot;Column16&quot;, &quot;Column17&quot;, &quot;Column18&quot;, &quot;Column19&quot;, &quot;Column20&quot;, &quot;Column21&quot;, &quot;Column22&quot;, &quot;Column23&quot;, &quot;Column24&quot;, &quot;Column25&quot;, &quot;Column26&quot;, &quot;Column27&quot;, &quot;Column28&quot;, &quot;Column29&quot;, &quot;Column30&quot;, &quot;TableName&quot;, &quot;SourceFile&quot;, &quot;ShortKey&quot;}),&#13;&#10;    #&quot;Grouped Rows&quot; = Table.Group(#&quot;Replaced Value2&quot;, {&quot;TableName&quot;}, {{&quot;TableData&quot;, each _, type table [Column1=text, Column2=text, Column3=text, Column4=text, Column5=nullable text, Column6=nullable text, Column7=nullable text, Column8=nullable text, Column9=nullable text, Column10=text, Column11=nullable text, Column12=nullable text, Column13=nullable text, Column14=nullable text, Column15=nullable text, Column16=nullable text, Column17=nullable text, Column18=nullable text, Column19=nullable text, Column20=nullable text, Column21=nullable text, Column22=nullable text, Column23=nullable text, Column24=nullable text, Column25=text, Column26=text, Column27=text, Column28=text, Column29=text, Column30=text, TableName=text, SourceFile=text, ShortKey=text]}})&#13;&#10;in&#13;&#10;    #&quot;Grouped Rows&quot;]]&gt;&lt;/Formula&gt;&lt;IsParameterQuery xsi:nil=&quot;true&quot; /&gt;&lt;IsDirectQuery xsi:nil=&quot;true&quot; /&gt;&lt;/Query&gt;&lt;Query Name=&quot;Transform Blob&quot;&gt;&lt;Formula&gt;&lt;![CDATA[let&#13;&#10;    Source = (#&quot;Identify Blob Target&quot; as binary) =&gt; let&#13;&#10;        // Source is the blob file, determined by &quot;Identify Blob Target&quot;&#13;&#10;        Source = Csv.Document(#&quot;Identify Blob Target&quot;,[Delimiter=&quot;,&quot;, Columns=30, Encoding=65001, QuoteStyle=QuoteStyle.None])&#13;&#10;    in&#13;&#10;        Source&#13;&#10;in&#13;&#10;    Source]]&gt;&lt;/Formula&gt;&lt;IsParameterQuery xsi:nil=&quot;true&quot; /&gt;&lt;IsDirectQuery xsi:nil=&quot;true&quot; /&gt;&lt;/Query&gt;&lt;Query Name=&quot;Blob&quot;&gt;&lt;Description&gt;A list file containing all imported CSV files as binary blobs.&lt;/Description&gt;&lt;Formula&gt;&lt;![CDATA[let&#13;&#10;    // Reads all CSV data in &quot;Folder to Import&quot; as a binary list.&#13;&#10;    Source = Folder.Files(#&quot;Folder to Import&quot;),&#13;&#10;    // Point to contents.&#13;&#10;    Navigation1 = Source{0}[Content]&#13;&#10;in&#13;&#10;    Navigation1]]&gt;&lt;/Formula&gt;&lt;IsParameterQuery xsi:nil=&quot;true&quot; /&gt;&lt;IsDirectQuery xsi:nil=&quot;true&quot; /&gt;&lt;/Query&gt;&lt;Query Name=&quot;FleetDataTable&quot;&gt;&lt;Description&gt;Third table in CSV.  Contains ship info for all ships in attacking and defending fleet.  29 columns.  One row per ship plus header.&lt;/Description&gt;&lt;Formula&gt;&lt;![CDATA[let&#13;&#10;    Source = MergedTables,&#13;&#10;    FleetData = Source{[TableName=&quot;FleetData&quot;]}[TableData],&#13;&#10;    #&quot;Removed Duplicates&quot; = Table.Distinct(FleetData),&#13;&#10;    #&quot;Promoted Headers&quot; = Table.PromoteHeaders(#&quot;Removed Duplicates&quot;, [PromoteAllScalars=true]),&#13;&#10;    #&quot;Removed Other Columns&quot; = Table.SelectColumns(#&quot;Promoted Headers&quot;,{&quot;Fleet Type&quot;, &quot;Attack&quot;, &quot;Defense&quot;, &quot;Health&quot;, &quot;Ship Ability&quot;, &quot;Captain Maneuver&quot;, &quot;Officer One Ability&quot;, &quot;Officer Two Ability&quot;, &quot;Officer Three Ability&quot;, &quot;Officer Attack Bonus&quot;, &quot;Damage Per Round&quot;, &quot;Armour Pierce&quot;, &quot;Shield Pierce&quot;, &quot;Accuracy&quot;, &quot;Critical Chance&quot;, &quot;Critical Damage&quot;, &quot;Officer Defense Bonus&quot;, &quot;Armour&quot;, &quot;Shield Deflection&quot;, &quot;Dodge&quot;, &quot;Officer Health Bonus&quot;, &quot;Shield Health&quot;, &quot;Hull Health&quot;, &quot;Impulse Speed&quot;, &quot;Warp Range&quot;, &quot;Warp Speed&quot;, &quot;Cargo Capacity&quot;, &quot;Protected Cargo&quot;, &quot;Mining Bonus&quot;, &quot;FleetData&quot;, &quot;SourceFile&quot;, &quot;ShortKey&quot;}),&#13;&#10;    #&quot;Renamed Columns&quot; = Table.RenameColumns(#&quot;Removed Other Columns&quot;,{{&quot;FleetData&quot;, &quot;TableType&quot;}})&#13;&#10;in&#13;&#10;    #&quot;Renamed Columns&quot;]]&gt;&lt;/Formula&gt;&lt;IsParameterQuery xsi:nil=&quot;true&quot; /&gt;&lt;IsDirectQuery xsi:nil=&quot;true&quot; /&gt;&lt;/Query&gt;&lt;/Items&gt;&lt;/Mashup&gt;</odc:PowerQueryMashupData>
+ </odc:OfficeDataConnection>
+</xml>
+<style>
+<!--
+    .ODCDataSource
+    {
+    behavior: url(dataconn.htc);
+    }
+-->
+</style>
+ 
+</head>
+
+<body onload='init()' scroll=no leftmargin=0 topmargin=0 rightmargin=0 style='border: 0px'>
+<table style='border: solid 1px threedface; height: 100%; width: 100%' cellpadding=0 cellspacing=0 width='100%'> 
+  <tr> 
+    <td id=tdName style='font-family:arial; font-size:medium; padding: 3px; background-color: threedface'> 
+      &nbsp; 
+    </td> 
+     <td id=tdTableDropdown style='padding: 3px; background-color: threedface; vertical-align: top; padding-bottom: 3px'>
+
+      &nbsp; 
+    </td> 
+  </tr> 
+  <tr> 
+    <td id=tdDesc colspan='2' style='border-bottom: 1px threedshadow solid; font-family: Arial; font-size: 1pt; padding: 2px; background-color: threedface'>
+
+      &nbsp; 
+    </td> 
+  </tr> 
+  <tr> 
+    <td colspan='2' style='height: 100%; padding-bottom: 4px; border-top: 1px threedhighlight solid;'> 
+      <div id='pt' style='height: 100%' class='ODCDataSource'></div> 
+    </td> 
+  </tr> 
+</table> 
+
+  
+<script language='javascript'> 
+
+function init() { 
+  var sName, sDescription; 
+  var i, j; 
+  
+  try { 
+    sName = unescape(location.href) 
+  
+    i = sName.lastIndexOf(".") 
+    if (i>=0) { sName = sName.substring(1, i); } 
+  
+    i = sName.lastIndexOf("/") 
+    if (i>=0) { sName = sName.substring(i+1, sName.length); } 
+
+    document.title = sName; 
+    document.getElementById("tdName").innerText = sName; 
+
+    sDescription = document.getElementById("docprops").innerHTML; 
+  
+    i = sDescription.indexOf("escription>") 
+    if (i>=0) { j = sDescription.indexOf("escription>", i + 11); } 
+
+    if (i>=0 && j >= 0) { 
+      j = sDescription.lastIndexOf("</", j); 
+
+      if (j>=0) { 
+          sDescription = sDescription.substring(i+11, j); 
+        if (sDescription != "") { 
+            document.getElementById("tdDesc").style.fontSize="x-small"; 
+          document.getElementById("tdDesc").innerHTML = sDescription; 
+          } 
+        } 
+      } 
+    } 
+  catch(e) { 
+
+    } 
+  } 
+</script> 
+
+</body> 
+ 
+</html>
