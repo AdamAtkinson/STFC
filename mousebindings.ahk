@@ -11,7 +11,7 @@
     ; SetMouseDelay, 5
     Global gDockCount := 5
     Global gCurrentDock := 1
-    Global gDockSpacer := 85
+    Global gDockSpacer := 75
     Return
 
 ; _____________________________________________________________________________________________
@@ -21,29 +21,29 @@
 
     TranslateUserAction(userAction) {
         ;Right Mouse Actions
-        If userAction = "1x-R-click"
+        If (userAction="1x-R-click")
             SelectCurrentDock()
-        If userAction = "1x-R-click-hold"
+        If (userAction="1x-R-click-hold")
             ClickReturnToBase()
-        If userAction = "2x-R-click"
+        If (userAction="2x-R-click")
             ClickMoveShip()
-        If userAction = "2x-R-click-hold"
+        If (userAction="2x-R-click-hold")
             ClickAttackTarget()
-        If userAction = "3x-R-click"
+        If (userAction="3x-R-click")
             SelectNextDock() 
-        If userAction = "3x-R-click-hold"
+        If (userAction="3x-R-click-hold")
             SelectPreviousDock()
-        If userAction = "4x-R-click"
+        If (userAction="4x-R-click")
             ClickRepairShip()
-        If userAction = "4x-R-click-hold"
+        If (userAction="4x-R-click-hold")
             ClickManageShip()
 
         ;Middle Mouse Actions
-        If userAction = "1x-M-click"
+        If (userAction="1x-M-click")
             ClickToggleGalaxyMap()  
-        If userAction = "1x-M-click-hold"
+        If (userAction="1x-M-click-hold")
             ClickReturnToPreviousScreen()    
-        If userAction = "2x-M-click"
+        If (userAction="2x-M-click")
             ClickClosePlayerProfile()
     }
     
@@ -214,4 +214,3 @@ MButton:: ; MButton is clicked, begin STFC MButton evaluation
     Else ; STFC window is not active, do not overide
         MouseClick, Middle ; the STFC window is not active
     Return
-
