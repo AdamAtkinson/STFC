@@ -59,8 +59,9 @@
         SendClicks(x+60, y-60)
     }
 
-    ClickDock(px)
+    ClickDock(px) {
         SendClicks(800+px,1000)
+    }
 
     ClickScanTarget() {
         SendClicks(1100, 660)
